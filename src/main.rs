@@ -1,14 +1,20 @@
 #![no_std]
 #![no_main]
+#![feature(panic_info_message)]
 
 use core::arch::global_asm;
 
 mod lang_items;
+mod sbi;
+
+#[macro_use]
+mod console;
 
 #[no_mangle]
 pub fn rust_main() -> ! {
     clear_bss();
-    loop {}
+    println!("hello, world");
+    panic!("shutdown machine");
 }
 
 fn clear_bss() {
@@ -20,5 +26,6 @@ fn clear_bss() {
         unsafe { (a as *mut u8).write_volatile(0) }
     });
 }
+
 
 global_asm!(include_str!("entry.asm"));

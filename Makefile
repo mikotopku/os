@@ -1,9 +1,13 @@
-release:
+LOG ?= INFO
+FLAGS = "--cfg LOG_$(LOG) -Clink-arg=-Tsrc/linker.ld -Cforce-frame-pointers=yes"
 
-	cargo build --release
+release:
+	RUSTFLAGS=$(FLAGS) cargo build --release 
 	rust-objcopy --strip-all \
 		target/riscv64gc-unknown-none-elf/release/os -O binary \
 		target/riscv64gc-unknown-none-elf/release/os.bin
+
+.PHONY = release load load_gdb gdb_connect
 
 load:
 

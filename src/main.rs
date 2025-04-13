@@ -14,6 +14,11 @@ mod console;
 pub fn rust_main() -> ! {
     clear_bss();
     println!("hello, world");
+    error!("hello, world\n");
+    warn!("hello, world\n");
+    info!("hello, world\n");
+    debug!("hello, world\n");
+    trace!("hello, world\n");
     panic!("shutdown machine");
 }
 

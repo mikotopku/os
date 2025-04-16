@@ -8,9 +8,9 @@ use crate::println;
 
 const USER_STACK_SIZE: usize = 4096 * 2;
 const KERNEL_STACK_SIZE: usize = 4096 * 2;
-const MAX_APP_NUM: usize = 16;
-const APP_BASE_ADDRESS: usize = 0x80400000;
-const APP_SIZE_LIMIT: usize = 0x20000;
+pub const MAX_APP_NUM: usize = 16;
+pub const APP_BASE_ADDRESS: usize = 0x80400000;
+pub const APP_SIZE_LIMIT: usize = 0x20000;
 
 #[repr(align(4096))]
 struct KernelStack {
@@ -20,6 +20,11 @@ struct KernelStack {
 #[repr(align(4096))]
 struct UserStack {
     data: [u8; USER_STACK_SIZE],
+}
+
+pub fn usrstk_info() -> (usize, usize) {
+    let beg  = USER_STACK.data.as_ptr() as usize;
+    (beg, beg + USER_STACK_SIZE)
 }
 
 static KERNEL_STACK: KernelStack = KernelStack {
@@ -154,4 +159,12 @@ pub fn run_next_app() -> ! {
         )) as *const _ as usize);
     }
     panic!("Unreachable in batch::run_current_app!");
+}
+
+
+// -> (current_app, memrange_start, memrange_end(exclusive))
+pub fn get_app_info() -> (usize, usize, usize) {
+    let am = APP_MANAGER.exclusive_access();
+    let cur = am.current_app;
+    (cur, am.app_start[cur], am.app_start[cur + 1])
 }

@@ -10,6 +10,8 @@ pub mod batch;
 mod sync;
 pub mod trap;
 pub mod syscall;
+mod loader;
+pub mod config;
 
 #[macro_use]
 mod console;

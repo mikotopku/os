@@ -12,6 +12,7 @@ pub mod syscall;
 mod loader;
 pub mod config;
 mod task;
+pub mod timer;
 
 #[macro_use]
 mod console;
@@ -26,6 +27,8 @@ pub fn rust_main() -> ! {
     println!("[kernel] hello, world");
     trap::init();
     loader::load_apps();
+    trap::enable_timer_interrupt();
+    timer::set_next_trigger();
     task::run_first_task();
     panic!("Unreachable in rust_main!");
 }

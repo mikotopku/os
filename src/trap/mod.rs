@@ -16,14 +16,13 @@ mod context;
 
 use crate::syscall::syscall;
 use core::{arch::global_asm, usize};
-use riscv::register::{
-    mtvec::TrapMode,
-    scause::{self, Trap},
-    stval, stvec::{self, Stvec},
-};
+use riscv::{interrupt::Interrupt, register::{
+    mtvec::TrapMode, scause::{self, Trap}, sie, stval, stvec::{self, Stvec} 
+}};
 use riscv::interrupt::Exception;
-use crate::println;
-use crate::task::exit_current_and_run_next;
+use crate::{println, debug};
+use crate::task::{exit_current_and_run_next, suspend_current_and_run_next};
+use crate::timer::set_next_trigger;
 
 global_asm!(include_str!("trap.S"));
 
@@ -37,6 +36,12 @@ pub fn init() {
         v.set_address(__alltraps as usize);
         v.set_trap_mode(TrapMode::Direct);
         stvec::write(v);
+    }
+}
+
+pub fn enable_timer_interrupt() {
+    unsafe {
+        sie::set_stimer();
     }
 }
 
@@ -69,12 +74,22 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
                 }
             }
         }
-        _ => {
-            panic!(
-                "Unsupported trap {:?}, stval = {:#x}!",
-                scause.cause(),
-                stval
-            );
+        Trap::Interrupt(intnum) => {
+            match unsafe {core::mem::transmute(intnum)}{
+                Interrupt::SupervisorTimer => {
+                    debug!("int: svt\n");
+                    set_next_trigger();
+                    suspend_current_and_run_next();
+                }
+                _ => {
+                    panic!(
+                        "Unsupported trap {:?}, stval = {:#x}!",
+                        scause.cause(),
+                        stval
+                    );
+                }
+            }
+            
         }
     }
     cx

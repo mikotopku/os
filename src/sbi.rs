@@ -49,6 +49,13 @@ pub fn console_putchar(c: usize) {
 #[cfg(feature = "board_qemu")]
 use crate::board::QEMUExit;
 /// use sbi call to shutdown the kernel
-pub fn shutdown() -> ! {
-    sbi_rt::system_reset(reset_type, reset_reason)
+pub fn shutdown(failure: bool) -> ! {
+    use sbi_rt::{system_reset, NoReason, Shutdown, SystemFailure};
+    if !failure {
+        system_reset(Shutdown, NoReason);
+    } else {
+        system_reset(Shutdown, SystemFailure);
+    }
+    unreachable!()
 }
+

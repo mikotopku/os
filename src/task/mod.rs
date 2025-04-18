@@ -135,15 +135,7 @@ impl TaskManager {
             // go back to user mode
         } else {
             println!("All applications completed!");
-            panic!("shutdown\n");
-
-            #[cfg(feature = "board_qemu")]
-            use crate::board::QEMUExit;
-            #[cfg(feature = "board_qemu")]
-            crate::board::QEMU_EXIT_HANDLE.exit_success();
-            
-            #[cfg(feature = "board_k210")]
-            panic!("All applications completed!");
+            crate::sbi::shutdown(false);
         }
     }
 }

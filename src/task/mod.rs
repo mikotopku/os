@@ -20,12 +20,12 @@ use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
 use lazy_static::*;
 use switch::__switch;
-use task::{TaskControlBlock, TaskStatus};
-use crate::println;
+use task::TaskControlBlock;
+use crate::{println, debug};
 use crate::timer::get_time_ms;
 
 pub use context::TaskContext;
-pub use task::{TaskInfo, SyscallInfo, UserTaskInfo};
+pub use task::{TaskInfo, SyscallInfo, UserTaskInfo, TaskStatus};
 
 /// The task manager, where all the tasks are managed.
 ///
@@ -68,23 +68,23 @@ lazy_static! {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
         }; MAX_APP_NUM];
-        let mut tmp = TaskManagerInner{
-            tasks,
-            current_task: 0,
-            taskinfo: [TaskInfo::init(MAX_APP_NUM); MAX_APP_NUM]
-        };
+        let mut taskinfo = [TaskInfo::init(MAX_APP_NUM); MAX_APP_NUM];
         for i in 0..MAX_APP_NUM {
-            tmp.taskinfo[i].id = i;
+            taskinfo[i].id = i;
         }
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
             task.task_status = TaskStatus::Ready;
-            tmp.taskinfo[i].status = TaskStatus::Ready;
+            taskinfo[i].status = TaskStatus::Ready;
         }
         TaskManager {
             num_app,
             inner: unsafe {
-                UPSafeCell::new(tmp)
+                UPSafeCell::new(TaskManagerInner {
+                    tasks,
+                    current_task: 0,
+                    taskinfo,
+                })
             },
         }
     };
@@ -149,7 +149,7 @@ impl TaskManager {
             inner.tasks[next].task_status = TaskStatus::Running;
             inner.current_task = next;
             inner.taskinfo[current].last_start = get_time_ms();
-            inner.taskinfo[current].status = TaskStatus::Running;
+            inner.taskinfo[next].status = TaskStatus::Running;
             let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
             let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
             drop(inner);

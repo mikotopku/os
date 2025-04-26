@@ -17,6 +17,17 @@ pub enum TaskStatus {
     Exited,
 }
 
+impl TaskStatus {
+    pub fn to_str(&self) -> &str {
+        match self{
+            Self::Exited => "exited",
+            Self::Ready => "ready",
+            Self::Running => "running",
+            Self::UnInit => "uninit",
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct TaskInfo {
     pub id: usize,

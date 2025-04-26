@@ -26,22 +26,24 @@ use crate::task::{UserTaskInfo, TASK_MANAGER};
 
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
-    let inner = TASK_MANAGER.inner.exclusive_access();
+    let mut inner = TASK_MANAGER.inner.exclusive_access();
+    let cur = inner.current();
     match syscall_id {
         SYSCALL_EXIT | SYSCALL_GET_TIME | SYSCALL_TASKINFO | SYSCALL_WRITE | SYSCALL_YIELD => (),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
-    for mut scinfo in inner.taskinfo[inner.current()].call {
-        if scinfo.id == syscall_id {
-            scinfo.times += 1;
+    for i in 0..MAX_SYSCALL_NUM {
+        if inner.taskinfo[cur].call[i].id == syscall_id {
+            inner.taskinfo[cur].call[i].times += 1;
             break;
         }
-        else if scinfo.id == 0 {
-            scinfo.id = syscall_id;
-            scinfo.times = 1;
+        else if inner.taskinfo[cur].call[i].id == 0 {
+            inner.taskinfo[cur].call[i].id = syscall_id;
+            inner.taskinfo[cur].call[i].times = 1;
             break;
         }
     }
+    drop(inner);
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),

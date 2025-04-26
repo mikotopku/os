@@ -33,7 +33,7 @@ macro_rules! println {
 #[macro_export]
 macro_rules! error {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("\x1b[31m[ERROR] ", $fmt, "\x1b[0m") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[31m[ERROR] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
     };
 }
 
@@ -42,7 +42,7 @@ macro_rules! error {
 #[macro_export]
 macro_rules! warn {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("\x1b[93m[WARN] ", $fmt, "\x1b[0m") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[93m[WARN] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
     };
 }
 #[cfg(all(not(any(LOG_WARN, LOG_INFO, LOG_DEBUG, LOG_TRACE)), LOG_ERROR))]
@@ -55,7 +55,7 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! info {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("\x1b[34m[INFO] ", $fmt, "\x1b[0m") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[34m[INFO] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
     };
 }
 #[cfg(all(not(any(LOG_INFO, LOG_DEBUG, LOG_TRACE)), any(LOG_WARN, LOG_ERROR)))]
@@ -69,7 +69,7 @@ macro_rules! info {
 #[macro_export]
 macro_rules! debug {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("\x1b[32m[DEBUG] ", $fmt, "\x1b[0m") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[32m[DEBUG] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
     };
 }
 #[cfg(all(not(any(LOG_DEBUG, LOG_TRACE)), any(LOG_INFO, LOG_WARN, LOG_ERROR)))]
@@ -82,7 +82,7 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! trace {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("\x1b[90m[TRACE] ", $fmt, "\x1b[0m") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[90m[TRACE] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
     };
 }
 #[cfg(all(not(any(LOG_TRACE)), any(LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR)))]

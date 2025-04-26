@@ -1,7 +1,7 @@
 //! Process management syscalls
 use crate::task::{exit_current_and_run_next, suspend_current_and_run_next, UserTaskInfo, TASK_MANAGER};
 use crate::timer::get_time_ms;
-use crate::println;
+use crate::{println, debug};
 
 /// task exits and submit an exit code
 pub fn sys_exit(exit_code: i32) -> ! {

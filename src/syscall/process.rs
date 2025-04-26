@@ -1,5 +1,5 @@
 //! Process management syscalls
-use crate::task::{exit_current_and_run_next, suspend_current_and_run_next};
+use crate::task::{exit_current_and_run_next, suspend_current_and_run_next, UserTaskInfo, TASK_MANAGER};
 use crate::timer::get_time_ms;
 use crate::println;
 
@@ -19,4 +19,15 @@ pub fn sys_yield() -> isize {
 /// get time in milliseconds
 pub fn sys_get_time() -> isize {
     get_time_ms() as isize
+}
+
+pub fn sys_task_info(id: usize, ts: *mut UserTaskInfo) -> isize {
+    if id >= TASK_MANAGER.num_app() { -1 }
+    else {
+        let inner = TASK_MANAGER.inner.exclusive_access();
+        unsafe {
+            *ts = inner.taskinfo[id].user();
+        }
+        0
+    }
 }

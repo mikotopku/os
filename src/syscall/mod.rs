@@ -14,20 +14,40 @@ const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_YIELD: usize = 124;
 const SYSCALL_GET_TIME: usize = 169;
+const SYSCALL_TASKINFO: usize = 410;
+pub const MAX_SYSCALL_NUM: usize = 5;
 
 mod fs;
 mod process;
 
 use fs::*;
 use process::*;
+use crate::task::{UserTaskInfo, TASK_MANAGER};
 
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+    let inner = TASK_MANAGER.inner.exclusive_access();
+    match syscall_id {
+        SYSCALL_EXIT | SYSCALL_GET_TIME | SYSCALL_TASKINFO | SYSCALL_WRITE | SYSCALL_YIELD => (),
+        _ => panic!("Unsupported syscall_id: {}", syscall_id),
+    }
+    for mut scinfo in inner.taskinfo[inner.current()].call {
+        if scinfo.id == syscall_id {
+            scinfo.times += 1;
+            break;
+        }
+        else if scinfo.id == 0 {
+            scinfo.id = syscall_id;
+            scinfo.times = 1;
+            break;
+        }
+    }
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
         SYSCALL_YIELD => sys_yield(),
         SYSCALL_GET_TIME => sys_get_time(),
+        SYSCALL_TASKINFO => sys_task_info(args[0], args[1] as *mut UserTaskInfo),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

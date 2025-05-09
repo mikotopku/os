@@ -1,8 +1,14 @@
 #![no_std]
 #![no_main]
 #![feature(panic_info_message)]
+#![feature(alloc_error_handler)]
 
 use core::arch::global_asm;
+
+extern crate alloc;
+
+#[macro_use]
+extern crate bitflags;
 
 mod lang_items;
 mod sbi;
@@ -13,6 +19,7 @@ mod loader;
 pub mod config;
 mod task;
 pub mod timer;
+mod mm;
 
 #[macro_use]
 mod console;

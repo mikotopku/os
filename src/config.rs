@@ -15,3 +15,8 @@ pub fn kernel_stack_position(app_id: usize) -> (usize, usize) {
     let bottom = top - KERNEL_STACK_SIZE;
     (bottom, top)
 }
+
+pub const CLOCK_FREQ: usize = 12500000;
+pub const MMIO: &[(usize, usize)] = &[
+    (0x0010_0000, 0x00_2000), // VIRT_TEST/RTC  in virt machine
+];

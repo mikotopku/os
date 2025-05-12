@@ -15,6 +15,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
+use crate::config::PAGE_SIZE;
 use crate::loader::{get_app_data, get_num_app};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
@@ -71,8 +72,8 @@ lazy_static! {
         let mut taskinfo: Vec<TaskInfo> = Vec::new();
         for i in 0..num_app {
             tasks.push(TaskControlBlock::new(get_app_data(i), i));
+            taskinfo.push(TaskInfo::init(i));
             taskinfo[i].status = TaskStatus::Ready;
-            taskinfo[i].id = i;
         }
         TaskManager {
             num_app,
@@ -214,4 +215,11 @@ pub fn current_user_token() -> usize {
 /// Get the current 'Running' task's trap contexts.
 pub fn current_trap_cx() -> &'static mut TrapContext {
     TASK_MANAGER.get_current_trap_cx()
+}
+
+pub fn user_map_page(vpn: crate::mm::VirtPageNum, permission: crate::mm::MapPermission) {
+    let mut inner = TASK_MANAGER.inner.exclusive_access();
+    let cur = inner.current();
+    inner.tasks[cur].memory_set.insert_framed_area(
+        vpn.into(), crate::mm::VirtPageNum(vpn.0 + 1).into(), permission);
 }

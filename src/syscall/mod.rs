@@ -15,21 +15,26 @@ const SYSCALL_EXIT: usize = 93;
 const SYSCALL_YIELD: usize = 124;
 const SYSCALL_GET_TIME: usize = 169;
 const SYSCALL_TASKINFO: usize = 410;
-pub const MAX_SYSCALL_NUM: usize = 5;
+const SYSCALL_MMAP: usize = 222;
+const SYSCALL_MUNMAP: usize = 215;
+pub const MAX_SYSCALL_NUM: usize = 7;
 
 mod fs;
 mod process;
+mod mem;
 
 use fs::*;
 use process::*;
 use crate::task::{UserTaskInfo, TASK_MANAGER};
+use mem::*;
 
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     let mut inner = TASK_MANAGER.inner.exclusive_access();
     let cur = inner.current();
     match syscall_id {
-        SYSCALL_EXIT | SYSCALL_GET_TIME | SYSCALL_TASKINFO | SYSCALL_WRITE | SYSCALL_YIELD => (),
+        SYSCALL_EXIT | SYSCALL_GET_TIME | SYSCALL_TASKINFO | 
+            SYSCALL_WRITE | SYSCALL_YIELD | SYSCALL_MMAP |SYSCALL_MUNMAP => (),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
     for i in 0..MAX_SYSCALL_NUM {
@@ -50,6 +55,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_YIELD => sys_yield(),
         SYSCALL_GET_TIME => sys_get_time(),
         SYSCALL_TASKINFO => sys_task_info(args[0], args[1] as *mut UserTaskInfo),
+        SYSCALL_MMAP => sys_mmap(args[0], args[1] , args[2]),
+        SYSCALL_MUNMAP => sys_munmap(args[0], args[1]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

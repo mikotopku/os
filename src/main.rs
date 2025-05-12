@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
+#![feature(let_chains)]
 
 use core::arch::global_asm;
 
@@ -32,14 +33,18 @@ global_asm!(include_str!("link_app.S"));
 /// the rust entry-point of os
 pub fn rust_main() -> ! {
     clear_bss();
-    println!("[kernel] Hello, world!");
+    println!("[kernel] hello, world");
+    debug!("hello");
+    trap::init();
     mm::init();
     println!("[kernel] back to world!");
-    mm::remap_test();
-    trap::init();
+    //mm::remap_test();
+    
+    debug!("[kernel] trap::init complete");
     //trap::enable_interrupt();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
+    println!("[kernel] try to run first task");
     task::run_first_task();
     panic!("Unreachable in rust_main!");
 }

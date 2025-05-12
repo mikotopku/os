@@ -1,9 +1,11 @@
 //! Types related to task management
 
+use alloc::vec::{Vec};
+
 use super::TaskContext;
 use crate::syscall::MAX_SYSCALL_NUM;
 use crate::config::{TRAP_CONTEXT, kernel_stack_position};
-use crate::mm::{MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
+use crate::mm::{FrameTracker, MapPermission, MemorySet, PhysPageNum, VirtAddr, VirtPageNum, KERNEL_SPACE};
 use crate::trap::{trap_handler, TrapContext};
 
 pub struct TaskControlBlock {

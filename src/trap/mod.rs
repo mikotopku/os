@@ -65,27 +65,29 @@ pub fn enable_timer_interrupt() {
 /// handle an interrupt, exception, or system call from user space
 pub fn trap_handler() -> ! {
     set_kernel_trap_entry();
-    let cx = current_trap_cx();
     let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value
     match scause.cause() {
         Trap::Exception(exnum) => {
             match unsafe {core::mem::transmute(exnum)}{
                 Exception::UserEnvCall => {
+                    let mut cx = current_trap_cx();
                     cx.sepc += 4;
-                    cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+                    let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+                    cx = current_trap_cx();
+                    cx.x[10] = result;
                 }
                 Exception::StoreFault
                 | Exception::StorePageFault 
                 | Exception::LoadFault
                 | Exception::LoadPageFault
                 => {
-                    println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, cx.sepc);
-                    exit_current_and_run_next();
+                    println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, current_trap_cx().sepc);
+                    exit_current_and_run_next(-2);
                 }
                 Exception::IllegalInstruction => {
                     println!("[kernel] IllegalInstruction in application, kernel killed it.");
-                    exit_current_and_run_next();
+                    exit_current_and_run_next(-3);
                 }
                 _ => {
                     panic!(

@@ -1,13 +1,13 @@
 LOG ?= INFO
 FLAGS = "--cfg LOG_$(LOG) -Clink-arg=-Tsrc/linker.ld -Cforce-frame-pointers=yes"
 
-release:
+build:
 	RUSTFLAGS=$(FLAGS) cargo build --release 
 	rust-objcopy --strip-all \
 		target/riscv64gc-unknown-none-elf/release/os -O binary \
 		target/riscv64gc-unknown-none-elf/release/os.bin
 
-.PHONY = release load load_gdb gdb_connect
+.PHONY = build load load_gdb gdb_connect
 
 load:
 
@@ -15,6 +15,7 @@ load:
 		-machine virt \
 		-nographic \
 		-bios ../bootloader/rustsbi-qemu.bin \
+		-m 64\
 		-device loader,file=target/riscv64gc-unknown-none-elf/release/os.bin,addr=0x80200000
 
 load_gdb:

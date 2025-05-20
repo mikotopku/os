@@ -2,6 +2,11 @@ use std::fs::{read_dir, File};
 use std::io::{Result, Write};
 
 fn main() {
+    println!("cargo::rustc-check-cfg=cfg(LOG_ERROR)");
+    println!("cargo::rustc-check-cfg=cfg(LOG_WARN)");
+    println!("cargo::rustc-check-cfg=cfg(LOG_INFO)");
+    println!("cargo::rustc-check-cfg=cfg(LOG_DEBUG)");
+    println!("cargo::rustc-check-cfg=cfg(LOG_TRACE)");
     println!("cargo:rerun-if-changed=../user/src/");
     println!("cargo:rerun-if-changed={}", TARGET_PATH);
     insert_app_data().unwrap();
@@ -37,6 +42,16 @@ _num_app:
         writeln!(f, r#"    .quad app_{}_start"#, i)?;
     }
     writeln!(f, r#"    .quad app_{}_end"#, apps.len() - 1)?;
+
+    writeln!(
+        f,
+        r#"
+    .global _app_names
+_app_names:"#
+    )?;
+    for app in apps.iter() {
+        writeln!(f, r#"    .string "{}""#, app)?;
+    }
 
     for (idx, app) in apps.iter().enumerate() {
         println!("app_{}: {}", idx, app);

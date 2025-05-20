@@ -33,19 +33,16 @@ global_asm!(include_str!("link_app.S"));
 /// the rust entry-point of os
 pub fn rust_main() -> ! {
     clear_bss();
-    println!("[kernel] hello, world");
-    debug!("hello");
-    trap::init();
+    println!("[kernel] Hello, world!");
     mm::init();
-    println!("[kernel] back to world!");
-    //mm::remap_test();
-    
-    debug!("[kernel] trap::init complete");
+    task::add_initproc();
+    println!("after initproc!");
+    trap::init();
     //trap::enable_interrupt();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
-    println!("[kernel] try to run first task");
-    task::run_first_task();
+    loader::list_apps();
+    task::run_tasks();
     panic!("Unreachable in rust_main!");
 }
 

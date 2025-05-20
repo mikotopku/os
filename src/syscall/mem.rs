@@ -1,6 +1,6 @@
 use crate::bitflags::bitflags;
 use crate::{error, debug};
-use crate::task::{current_user_token, user_map_page, TASK_MANAGER};
+use crate::task::{current_user_token, user_insert_area, user_unmap_area};
 use crate::mm::{frame_alloc, MapPermission, MemorySet, PTEFlags, PageTable, VPNRange, VirtAddr};
 
 bitflags! {
@@ -60,15 +60,8 @@ pub fn sys_mmap(start: usize, len: usize, prot: usize) -> isize {
                     return -1;
                 }
             }
-            user_map_page(vpn, perm);
-            if let Some(pte) = table.translate(vpn) && pte.is_valid() {
-                debug!("map {:x} -> {:x}", vpn.0, pte.ppn().0);
-            }
-            else {
-                error!("map failed {:x}", vpn.0);
-                return -1;
-            }
         }
+        user_insert_area(range.get_start().into(), range.get_end().into(), perm);
         0
     }
     else {
@@ -77,18 +70,6 @@ pub fn sys_mmap(start: usize, len: usize, prot: usize) -> isize {
     }
 }
 
-pub fn sys_munmap(start: usize, len: usize) -> isize {
-    let mut table = PageTable::from_token(current_user_token());
-    let range = 
-        VPNRange::new(VirtAddr::from(start).floor(), VirtAddr::from(start + len).ceil());
-    for vpn in range {
-        if let None = table.translate(vpn) {
-            error!("cannot unmap an unmapped area {}", vpn.0);
-            return -1;
-        }
-        else {
-            table.unmap(vpn);
-        }
-    }
-    0
+pub fn sys_munmap(start: usize) -> isize {
+    user_unmap_area(VirtAddr::from(start))
 }

@@ -1,5 +1,5 @@
 //!Implementation of [`TaskControlBlock`]
-use super::TaskContext;
+use super::{PidAllocator, TaskContext};
 use super::{pid_alloc, KernelStack, PidHandle};
 use crate::config::TRAP_CONTEXT;
 use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
@@ -159,6 +159,42 @@ impl TaskControlBlock {
         // ---- release parent PCB automatically
         // **** release children PCB automatically
     }
+    pub fn spawn(self: &Arc<Self>, elf_data: &[u8]) -> Arc<Self>{
+        let (memory_set, user_sp, entry) = MemorySet::from_elf(elf_data);
+        let trap_cx_ppn = 
+            memory_set
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+        let pid_handle = pid_alloc();
+        let kernel_stack = KernelStack::new(&pid_handle);
+        let kernel_stack_top = kernel_stack.get_top();
+        let tcb = Arc::new(TaskControlBlock {
+            pid: pid_handle,
+            kernel_stack,
+            inner: unsafe { UPSafeCell::new(TaskControlBlockInner {
+                trap_cx_ppn,
+                base_size: user_sp,
+                task_cx: TaskContext::goto_trap_return(kernel_stack_top),
+                task_status: TaskStatus::Ready,
+                memory_set,
+                parent: Some(Arc::downgrade(self)),
+                children: Vec::new(),
+                exit_code: 0,
+            })}
+        });
+        let trap_cx = tcb.inner_exclusive_access().get_trap_cx();
+        *trap_cx = TrapContext::app_init_context(
+            entry,
+            user_sp,
+            KERNEL_SPACE.exclusive_access().token(),
+            kernel_stack_top,
+            trap_handler as usize,
+        );
+        let mut parent_inner = self.inner_exclusive_access();
+        parent_inner.children.push(tcb.clone());
+        tcb
+    }
     pub fn getpid(&self) -> usize {
         self.pid.0
     }
@@ -172,11 +208,10 @@ pub enum TaskStatus {
 }
 
 
-#[derive(Clone, Copy)]
 pub struct TaskInfo {
     pub id: usize,
     pub status: TaskStatus,
-    pub call: [SyscallInfo; MAX_SYSCALL_NUM],
+    pub call: Vec<SyscallInfo>,
     pub total_time: usize,
     pub last_start: usize,
 }
@@ -192,13 +227,22 @@ impl TaskInfo {
         Self {
             id: id,
             status: TaskStatus::Ready,
-            call: [SyscallInfo {id: 0, times: 0}; MAX_SYSCALL_NUM],
+            call: Vec::new(),
             total_time: 0,
             last_start: 0,
         }
     }
     pub fn user(&self) -> UserTaskInfo {
-        UserTaskInfo { id: self.id, status: self.status, call: self.call, total_time: self.total_time }
+        let mut ret = UserTaskInfo {
+            id: self.id,
+            status: self.status,
+            call: [SyscallInfo{id: 0, times: 0}; MAX_SYSCALL_NUM],
+            total_time: self.total_time
+        };
+        for (ind, info) in self.call.iter().enumerate() {
+            ret.call[ind] = *info;
+        }
+        ret
     }
 }
 

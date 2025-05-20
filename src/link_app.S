@@ -3,7 +3,7 @@
     .section .data
     .global _num_app
 _num_app:
-    .quad 17
+    .quad 18
     .quad app_0_start
     .quad app_1_start
     .quad app_2_start
@@ -21,7 +21,8 @@ _num_app:
     .quad app_14_start
     .quad app_15_start
     .quad app_16_start
-    .quad app_16_end
+    .quad app_17_start
+    .quad app_17_end
 
     .global _app_names
 _app_names:
@@ -37,6 +38,7 @@ _app_names:
     .string "mem"
     .string "sleep"
     .string "sleep_simple"
+    .string "spawntest"
     .string "stack_overflow"
     .string "user_shell"
     .string "usertests"
@@ -144,7 +146,7 @@ app_11_end:
     .global app_12_end
     .align 3
 app_12_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/stack_overflow"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/spawntest"
 app_12_end:
 
     .section .data
@@ -152,7 +154,7 @@ app_12_end:
     .global app_13_end
     .align 3
 app_13_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/user_shell"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/stack_overflow"
 app_13_end:
 
     .section .data
@@ -160,7 +162,7 @@ app_13_end:
     .global app_14_end
     .align 3
 app_14_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/usertests"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/user_shell"
 app_14_end:
 
     .section .data
@@ -168,7 +170,7 @@ app_14_end:
     .global app_15_end
     .align 3
 app_15_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/usertests-simple"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/usertests"
 app_15_end:
 
     .section .data
@@ -176,5 +178,13 @@ app_15_end:
     .global app_16_end
     .align 3
 app_16_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/yield"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/usertests-simple"
 app_16_end:
+
+    .section .data
+    .global app_17_start
+    .global app_17_end
+    .align 3
+app_17_start:
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/yield"
+app_17_end:

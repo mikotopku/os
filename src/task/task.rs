@@ -27,6 +27,8 @@ pub struct TaskControlBlockInner {
     pub parent: Option<Weak<TaskControlBlock>>,
     pub children: Vec<Arc<TaskControlBlock>>,
     pub exit_code: i32,
+    pub stride: u8,
+    pub priority: u8,
 }
 
 impl TaskControlBlockInner {
@@ -78,6 +80,8 @@ impl TaskControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
+                    stride: 0,
+                    priority: 16,
                 })
             },
         };
@@ -145,6 +149,8 @@ impl TaskControlBlock {
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
                     exit_code: 0,
+                    stride: 0,
+                    priority: 16,
                 })
             },
         });
@@ -181,6 +187,8 @@ impl TaskControlBlock {
                 parent: Some(Arc::downgrade(self)),
                 children: Vec::new(),
                 exit_code: 0,
+                stride: 0,
+                priority: 16,
             })}
         });
         let trap_cx = tcb.inner_exclusive_access().get_trap_cx();
@@ -197,6 +205,43 @@ impl TaskControlBlock {
     }
     pub fn getpid(&self) -> usize {
         self.pid.0
+    }
+}
+
+fn tcb_cmp(this: &TaskControlBlock, other: &TaskControlBlock) -> core::cmp::Ordering {
+    let this = this.inner_exclusive_access();
+    let another = other.inner_exclusive_access();
+    let delta = this.stride - another.stride;
+    if delta == 0 {
+        core::cmp::Ordering::Equal
+    }
+    else if delta <= 128 {
+        core::cmp::Ordering::Less
+    }
+    else {
+        core::cmp::Ordering::Greater
+    }
+}
+
+impl PartialEq for TaskControlBlock {
+    fn eq(&self, other: &Self) -> bool {
+        let this = self.inner_exclusive_access();
+        let other = other.inner_exclusive_access();
+        this.stride == other.stride
+    }
+}
+
+impl Eq for TaskControlBlock {}
+
+impl PartialOrd for TaskControlBlock {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(tcb_cmp(self, other))
+    }
+}
+
+impl Ord for TaskControlBlock {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        tcb_cmp(self, other)
     }
 }
 

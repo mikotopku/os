@@ -127,3 +127,14 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
     }
     // ---- release current PCB lock automatically
 }
+
+pub fn sys_set_priority(prio: u8) -> isize {
+    if prio < 2 {
+        -1
+    } else {
+        let task = current_task().unwrap();
+        let mut inner = task.inner_exclusive_access();
+        inner.priority = prio;
+        0
+    }
+}

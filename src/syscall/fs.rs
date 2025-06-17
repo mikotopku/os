@@ -1,7 +1,8 @@
 //! File and filesystem-related syscalls
-use crate::fs::{OpenFlags, open_file};
-use crate::mm::{UserBuffer, translated_byte_buffer, translated_str};
+use crate::fs::{OpenFlags, open_file, create_hard_link, delete_hard_link, hard_link_cnt, Stat, StatMode};
+use crate::mm::{translated_byte_buffer, translated_refmut, translated_str, UserBuffer};
 use crate::task::{current_task, current_user_token};
+use crate::debug;
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let token = current_user_token();
@@ -68,4 +69,35 @@ pub fn sys_close(fd: usize) -> isize {
     }
     inner.fd_table[fd].take();
     0
+}
+
+pub fn sys_linkat(olddirfd: i32, oldpath: *const u8, newdirfd: i32, newpath: *const u8, flags: u32) -> isize {
+    let token = current_user_token();
+    let oldpath = translated_str(token, oldpath);
+    let newpath = translated_str(token, newpath);
+    debug!("linkat {} {}", oldpath, newpath);
+    create_hard_link(oldpath.as_str(), newpath.as_str())
+}
+
+pub fn sys_unlinkat(dirfd: i32, path: *const u8, flags: u32) -> isize {
+    let token = current_user_token();
+    let path = translated_str(token, path);
+    debug!("unlinkat {}", path);
+    delete_hard_link(path.as_str())
+}
+
+pub fn sys_fstat(fd: i32, st: *mut Stat) -> isize {
+    let fd = fd as usize;
+    let st = translated_refmut(current_user_token(), st);
+    let task = current_task().unwrap();
+    let inner = task.inner_exclusive_access();
+    if fd >= inner.fd_table.len() { return -1; }
+    if let Some(file) = &inner.fd_table[fd].clone() {
+        drop(inner);
+        *st = file.stat();
+        0
+    }
+    else {
+        -1
+    }
 }

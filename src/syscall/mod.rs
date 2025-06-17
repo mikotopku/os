@@ -26,7 +26,10 @@ const SYSCALL_EXEC: usize = 221;
 const SYSCALL_WAITPID: usize = 260;
 const SYSCALL_SPAWN: usize = 400;
 const SYSCALL_SET_PRIORITY: usize = 140;
-pub const MAX_SYSCALL_NUM: usize = 16;
+const SYSCALL_LINKAT: usize = 37;
+const SYSCALL_UNLINKAT: usize = 35;
+const SYSCALL_FSTAT: usize = 80;
+pub const MAX_SYSCALL_NUM: usize = 19;
 
 mod fs;
 mod process;
@@ -34,11 +37,11 @@ mod mem;
 
 use fs::*;
 use process::*;
-use crate::task::{UserTaskInfo};
+use crate::{fs::Stat, task::UserTaskInfo};
 use mem::*;
 
 /// handle syscall exception with `syscall_id` and other arguments
-pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+pub fn syscall(syscall_id: usize, args: [usize; 7]) -> isize {
     // let mut inner = TASK_MANAGER.inner.exclusive_access();
     // let cur = inner.current();
     // match syscall_id {
@@ -76,6 +79,9 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut i32),
         SYSCALL_SPAWN => sys_spawn(args[0] as *const u8),
         SYSCALL_SET_PRIORITY => sys_set_priority(args[0] as u8),
+        SYSCALL_LINKAT => sys_linkat(args[0] as i32, args[1] as *const u8, args[2] as i32, args[3] as *const u8, args[4] as u32),
+        SYSCALL_UNLINKAT => sys_unlinkat(args[0] as i32, args[1] as *const u8, args[2] as u32),
+        SYSCALL_FSTAT => sys_fstat(args[0] as i32, args[1] as *mut Stat),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

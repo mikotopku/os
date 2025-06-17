@@ -16,11 +16,12 @@ mod sbi;
 mod sync;
 pub mod trap;
 pub mod syscall;
-mod loader;
 pub mod config;
 mod task;
 pub mod timer;
 mod mm;
+mod fs;
+mod drivers;
 
 #[macro_use]
 mod console;
@@ -41,7 +42,6 @@ pub fn rust_main() -> ! {
     //trap::enable_interrupt();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
-    loader::list_apps();
     task::run_tasks();
     panic!("Unreachable in rust_main!");
 }

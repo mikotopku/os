@@ -19,7 +19,7 @@ mod pid;
 mod manager;
 mod processor;
 
-use crate::{loader::{get_app_data, get_app_data_by_name, get_num_app}, mm::MapPermission};
+use crate::{fs::{open_file, OpenFlags}, mm::MapPermission};
 use alloc::sync::Arc;
 use lazy_static::*;
 use switch::__switch;
@@ -132,9 +132,11 @@ pub fn user_unmap_area(start_va: crate::mm::VirtAddr) -> isize {
 
 lazy_static! {
     ///Globle process that init user shell
-    pub static ref INITPROC: Arc<TaskControlBlock> = Arc::new(TaskControlBlock::new(
-        get_app_data_by_name("initproc").unwrap()
-    ));
+    pub static ref INITPROC: Arc<TaskControlBlock> = Arc::new({
+        let inode = open_file("initproc", OpenFlags::RDONLY).unwrap();
+        let v = inode.read_all();
+        TaskControlBlock::new(v.as_slice())
+    });
 }
 ///Add init process to the manager
 pub fn add_initproc() {

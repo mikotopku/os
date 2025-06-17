@@ -14,11 +14,11 @@ mod page_table;
 
 pub use address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
 pub use address::{StepByOne, VPNRange};
-pub use frame_allocator::{frame_alloc, FrameTracker};
+pub use frame_allocator::{frame_dealloc, frame_alloc, FrameTracker};
 pub use memory_set::remap_test;
-pub use memory_set::{MapPermission, MemorySet, KERNEL_SPACE};
+pub use memory_set::{MapPermission, MemorySet, KERNEL_SPACE, kernel_token};
 pub use page_table::{translated_byte_buffer, PageTableEntry};
-pub use page_table::{PTEFlags, PageTable, translated_refmut, translated_str};
+pub use page_table::{PTEFlags, PageTable, translated_refmut, translated_str, UserBuffer};
 
 /// initiate heap allocator, frame allocator and kernel space
 pub fn init() {

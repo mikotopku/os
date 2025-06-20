@@ -10,6 +10,8 @@
 //! `sys_` then the name of the syscall. You can find functions like this in
 //! submodules, and you should also implement syscalls this way.
 
+const SYSCALL_DUP: usize = 24;
+const SYSCALL_PIPE: usize = 59;
 const SYSCALL_OPEN: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
 const SYSCALL_READ: usize = 63;
@@ -29,7 +31,11 @@ const SYSCALL_SET_PRIORITY: usize = 140;
 const SYSCALL_LINKAT: usize = 37;
 const SYSCALL_UNLINKAT: usize = 35;
 const SYSCALL_FSTAT: usize = 80;
-pub const MAX_SYSCALL_NUM: usize = 19;
+const SYSCALL_SIGACTION: usize = 134;
+const SYSCALL_SIGPROCMASK: usize = 135;
+const SYSCALL_SIGRETURN: usize = 139;
+const SYSCALL_KILL: usize = 129;
+pub const MAX_SYSCALL_NUM: usize = 25;
 
 mod fs;
 mod process;
@@ -37,7 +43,7 @@ mod mem;
 
 use fs::*;
 use process::*;
-use crate::{fs::Stat, task::UserTaskInfo};
+use crate::{fs::Stat, task::{SignalAction, UserTaskInfo}};
 use mem::*;
 
 /// handle syscall exception with `syscall_id` and other arguments
@@ -63,6 +69,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 7]) -> isize {
     // }
     // drop(inner);
     match syscall_id {
+        SYSCALL_DUP => sys_dup(args[0]),
+        SYSCALL_PIPE => sys_pipe(args[0] as *mut usize),
         SYSCALL_OPEN => sys_open(args[0] as *const u8, args[1] as u32),
         SYSCALL_CLOSE => sys_close(args[0] as usize),
         SYSCALL_READ => sys_read(args[0], args[1] as *const u8, args[2]),
@@ -75,13 +83,21 @@ pub fn syscall(syscall_id: usize, args: [usize; 7]) -> isize {
         SYSCALL_MUNMAP => sys_munmap(args[0]),
         SYSCALL_GETPID => sys_getpid(),
         SYSCALL_FORK => sys_fork(),
-        SYSCALL_EXEC => sys_exec(args[0] as *const u8),
+        SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const usize),
         SYSCALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut i32),
-        SYSCALL_SPAWN => sys_spawn(args[0] as *const u8),
+        SYSCALL_SPAWN => sys_spawn(args[0] as *const u8, args[1] as *const usize),
         SYSCALL_SET_PRIORITY => sys_set_priority(args[0] as u8),
         SYSCALL_LINKAT => sys_linkat(args[0] as i32, args[1] as *const u8, args[2] as i32, args[3] as *const u8, args[4] as u32),
         SYSCALL_UNLINKAT => sys_unlinkat(args[0] as i32, args[1] as *const u8, args[2] as u32),
         SYSCALL_FSTAT => sys_fstat(args[0] as i32, args[1] as *mut Stat),
+        SYSCALL_KILL => sys_kill(args[0], args[1] as i32),
+        SYSCALL_SIGACTION => sys_sigaction(
+            args[0] as i32,
+            args[1] as *const SignalAction,
+            args[2] as *mut SignalAction,
+        ),
+        SYSCALL_SIGPROCMASK => sys_sigprocmask(args[0] as u32),
+        SYSCALL_SIGRETURN => sys_sigreturn(),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

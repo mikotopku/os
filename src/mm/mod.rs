@@ -18,7 +18,7 @@ pub use frame_allocator::{frame_dealloc, frame_alloc, FrameTracker};
 pub use memory_set::remap_test;
 pub use memory_set::{MapPermission, MemorySet, KERNEL_SPACE, kernel_token};
 pub use page_table::{translated_byte_buffer, PageTableEntry};
-pub use page_table::{PTEFlags, PageTable, translated_refmut, translated_str, UserBuffer};
+pub use page_table::{PTEFlags, PageTable, translated_refmut, translated_str, UserBuffer, translated_ref, translated_args_vec};
 
 /// initiate heap allocator, frame allocator and kernel space
 pub fn init() {

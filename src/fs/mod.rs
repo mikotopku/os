@@ -1,6 +1,7 @@
 //! File system in os
 mod inode;
 mod stdio;
+mod pipe;
 
 use crate::mm::UserBuffer;
 
@@ -57,3 +58,4 @@ pub trait File: Send + Sync {
 
 pub use inode::{OSInode, OpenFlags, list_apps, open_file, create_hard_link, delete_hard_link, hard_link_cnt};
 pub use stdio::{Stdin, Stdout};
+pub use pipe::make_pipe;

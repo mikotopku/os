@@ -158,10 +158,12 @@ pub fn sys_kill(pid: usize, signum: i32) -> isize {
             task_ref.signals.insert(flag);
             0
         } else {
+            debug!("sys_kill: from_bit failed");
             -1
         }
     } else {
-        -1
+        debug!("sys_kill: pid2task failed");
+        -2
     }
 }
 

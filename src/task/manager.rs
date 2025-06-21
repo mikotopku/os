@@ -45,6 +45,7 @@ lazy_static! {
 }
 ///Interface offered to add task
 pub fn add_task(task: Arc<TaskControlBlock>) {
+    PID2TCB.exclusive_access().insert(task.getpid(), Arc::clone(&task));
     TASK_MANAGER.exclusive_access().add(task);
 }
 ///Interface offered to pop the first task

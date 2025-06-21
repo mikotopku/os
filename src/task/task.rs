@@ -6,6 +6,7 @@ use crate::fs::{File, Stdin, Stdout};
 use crate::mm::{translated_refmut, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
 use crate::syscall::MAX_SYSCALL_NUM;
+use crate::task::mail::{Mail, MailBox};
 use crate::task::{SignalActions, SignalFlags};
 use crate::trap::{self, trap_handler, TrapContext};
 use alloc::string::String;
@@ -13,6 +14,7 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::{Vec};
 use alloc::vec;
 use core::cell::RefMut;
+use core::ops::Deref;
 
 pub struct TaskControlBlock {
     // immutable
@@ -45,6 +47,7 @@ pub struct TaskControlBlockInner {
     // if the task is frozen by a signal
     pub frozen: bool,
     pub trap_ctx_backup: Option<TrapContext>,
+    pub mailbox: MailBox,
 }
 
 impl TaskControlBlockInner {
@@ -118,6 +121,7 @@ impl TaskControlBlock {
                     killed: false,
                     frozen: false,
                     trap_ctx_backup: None,
+                    mailbox: MailBox::new(),
                 })
             },
         };
@@ -236,6 +240,7 @@ impl TaskControlBlock {
                     killed: false,
                     frozen: false,
                     trap_ctx_backup: None,
+                    mailbox: parent_inner.mailbox.clone(),
                 })
             },
         });
@@ -288,6 +293,7 @@ impl TaskControlBlock {
                 killed: false,
                 frozen: false,
                 trap_ctx_backup: None,
+                mailbox: MailBox::new(),
             })}
         });
         let trap_cx = tcb.inner_exclusive_access().get_trap_cx();
@@ -306,6 +312,29 @@ impl TaskControlBlock {
     }
     pub fn getpid(&self) -> usize {
         self.pid.0
+    }
+    pub fn mailread(&self) -> Option<Mail> {
+        let mut inner = self.inner_exclusive_access();
+        if inner.mailbox.available_read() > 0 {
+            Some(inner.mailbox.read())
+        }else {
+            None
+        }
+    }
+    pub fn mailwrite(&self, mail: &Mail) -> isize {
+        let mut inner = self.inner_exclusive_access();
+        if inner.mailbox.available_write() > 0 {
+            inner.mailbox.write(mail);
+            mail.len as isize
+        } else {
+            -1
+        }
+    }
+    pub fn mailread_available(&self) -> usize {
+        self.inner_exclusive_access().mailbox.available_read()
+    }
+    pub fn mailwrite_available(&self) -> usize {
+        self.inner_exclusive_access().mailbox.available_write()
     }
 }
 

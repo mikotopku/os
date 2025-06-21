@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 
 use crate::config::PAGE_SIZE;
 use crate::fs::{open_file, OpenFlags};
-use crate::task::{add_task, current_task, current_user_token, exit_current_and_run_next, pid2task, suspend_current_and_run_next, SignalAction, SignalFlags, UserTaskInfo, MAX_SIG};
+use crate::task::{add_task, current_task, current_user_token, exit_current_and_run_next, pid2task, suspend_current_and_run_next, Mail, SignalAction, SignalFlags, UserTaskInfo, MAIL_MAXLEN, MAX_SIG};
 use crate::timer::get_time_ms;
 use crate::{println, debug};
 use crate::mm::{translated_args_vec, translated_byte_buffer, translated_ref, translated_refmut, translated_str};
@@ -234,3 +234,53 @@ pub fn sys_sigaction(
     }
 }
 
+pub fn sys_mailread(buf: *mut u8, len: usize) -> isize {
+    let task = current_task().unwrap();
+    debug!("{} readable: {}", task.getpid(), task.mailread_available());
+    if len == 0 {
+        if task.mailread_available() > 0 { return 0; }
+        else { return -1; }
+    }
+    let mail = task.mailread();
+    drop(task);
+    if let Some(mail) = mail {
+        let token = current_user_token();
+        let len = len.min(MAIL_MAXLEN);
+        let tr = translated_byte_buffer(token, buf, len);
+        let mut already_read = 0;
+        for b in tr {
+            let toread = mail.len.min(already_read + b.len()) - already_read;
+            b[..toread].copy_from_slice(&mail.content[already_read..already_read + toread]);
+            already_read += toread;
+            if already_read == mail.len { break; }
+        }
+        already_read as isize
+    } else {
+        -1
+    }
+}
+
+pub fn sys_mailwrite(pid: usize, buf: *const u8, len: usize) -> isize {
+    let task = pid2task(pid);
+    if let Some(task) = task
+    {
+        debug!("{} writable: {}", pid, task.mailwrite_available());
+        if task.mailwrite_available() > 0 {
+            if len == 0 { return 0; }
+        } else { return -1; }
+        let mut mail = Mail::empty();
+        let token = current_user_token();
+        let len = len.min(MAIL_MAXLEN);
+        let tr = translated_byte_buffer(token, buf, len);
+        let mut already_write = 0;
+        for b in tr {
+            let towrite = b.len().min(len - already_write);
+            mail.content[already_write..already_write + towrite].copy_from_slice(b);
+            already_write += towrite;
+        }
+        mail.len = already_write;
+        task.mailwrite(&mail)
+    } else {
+        -1
+    }
+}

@@ -20,6 +20,7 @@ mod manager;
 mod processor;
 mod signal;
 mod action;
+mod mail;
 
 use crate::{fs::{open_file, OpenFlags}, mm::MapPermission};
 use alloc::sync::Arc;
@@ -38,6 +39,7 @@ pub use processor::{
 };
 pub use signal::{MAX_SIG, SignalFlags};
 pub use action::{SignalAction, SignalActions};
+pub use mail::{Mail, MailBox, MAIL_BUFFER_SIZE, MAIL_MAXLEN};
 
 pub fn suspend_current_and_run_next() {
     // There must be an application running.

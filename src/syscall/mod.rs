@@ -35,7 +35,9 @@ const SYSCALL_SIGACTION: usize = 134;
 const SYSCALL_SIGPROCMASK: usize = 135;
 const SYSCALL_SIGRETURN: usize = 139;
 const SYSCALL_KILL: usize = 129;
-pub const MAX_SYSCALL_NUM: usize = 25;
+const SYSCALL_MAILREAD: usize = 401;
+const SYSCALL_MAILWRITE: usize = 402;
+pub const MAX_SYSCALL_NUM: usize = 27;
 
 mod fs;
 mod process;
@@ -98,6 +100,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 7]) -> isize {
         ),
         SYSCALL_SIGPROCMASK => sys_sigprocmask(args[0] as u32),
         SYSCALL_SIGRETURN => sys_sigreturn(),
+        SYSCALL_MAILREAD => sys_mailread(args[0] as *mut u8, args[1]),
+        SYSCALL_MAILWRITE => sys_mailwrite(args[0], args[1] as *const u8, args[2]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

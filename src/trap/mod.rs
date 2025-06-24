@@ -13,13 +13,13 @@
 //! to [`syscall()`].
 mod context;
 
-use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
+use crate::config::{TRAMPOLINE};
 use crate::{println, debug};
 use crate::syscall::syscall;
 use crate::task::{
-    check_signals_error_of_current, current_add_signal, current_trap_cx, current_user_token, exit_current_and_run_next, handle_signals, suspend_current_and_run_next, SignalFlags
+    check_signals_of_current, current_add_signal, current_trap_cx, current_trap_cx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags
 };
-use crate::timer::set_next_trigger;
+use crate::timer::{check_timer, set_next_trigger};
 use core::arch::{asm, global_asm};
 use riscv::register::stvec::Stvec;
 use riscv::register::{
@@ -73,7 +73,7 @@ pub fn trap_handler() -> ! {
                 Exception::UserEnvCall => {
                     let mut cx = current_trap_cx();
                     cx.sepc += 4;
-                    let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12], cx.x[13], cx.x[14], cx.x[15], cx.x[16]]) as usize;
+                    let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
                     cx = current_trap_cx();
                     cx.x[10] = result;
                 }
@@ -102,6 +102,7 @@ pub fn trap_handler() -> ! {
             match unsafe {core::mem::transmute(intnum)}{
                 Interrupt::SupervisorTimer => {
                     set_next_trigger();
+                    check_timer();
                     suspend_current_and_run_next();
                 }
                 _ => {
@@ -114,12 +115,9 @@ pub fn trap_handler() -> ! {
             }
         }
     }
-    // handle signals (handle the sent signal)
-    //println!("[K] trap_handler:: handle_signals");
-    handle_signals();
 
     // check error signals (if error then exit)
-    if let Some((errno, msg)) = check_signals_error_of_current() {
+    if let Some((errno, msg)) = check_signals_of_current() {
         println!("[kernel] {}", msg);
         exit_current_and_run_next(errno);
     }
@@ -132,7 +130,7 @@ pub fn trap_handler() -> ! {
 /// finally, jump to new addr of __restore asm function
 pub fn trap_return() -> ! {
     set_user_trap_entry();
-    let trap_cx_ptr = TRAP_CONTEXT;
+    let trap_cx_ptr = current_trap_cx_user_va();
     let user_satp = current_user_token();
     extern "C" {
         fn __alltraps();

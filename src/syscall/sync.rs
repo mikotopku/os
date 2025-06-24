@@ -1,4 +1,5 @@
-use crate::sync::{Condvar, Mutex, MutexBlocking, MutexSpin, Semaphore};
+use crate::sync::{Condvar, Mutex, MutexBlocking, MutexFD, MutexSpin, Semaphore, SemaphoreFD};
+use crate::syscall::process;
 use crate::task::{block_current_and_run_next, current_process, current_task};
 use crate::timer::{add_timer, get_time_ms};
 use alloc::sync::Arc;
@@ -36,14 +37,12 @@ pub fn sys_mutex_create(blocking: bool) -> isize {
 }
 
 pub fn sys_mutex_lock(mutex_id: usize) -> isize {
-    debug!("{} try lock {}", current_task().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid ,mutex_id);
     let process = current_process();
     let process_inner = process.inner_exclusive_access();
     let mutex = Arc::clone(process_inner.mutex_list[mutex_id].as_ref().unwrap());
     drop(process_inner);
     drop(process);
     mutex.lock();
-    debug!("{} lock mut {}", current_task().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, mutex_id);
     0
 }
 
@@ -54,7 +53,6 @@ pub fn sys_mutex_unlock(mutex_id: usize) -> isize {
     drop(process_inner);
     drop(process);
     mutex.unlock();
-    debug!("{} unlock mut {}", current_task().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, mutex_id);
     0
 }
 
@@ -85,18 +83,15 @@ pub fn sys_semaphore_up(sem_id: usize) -> isize {
     let sem = Arc::clone(process_inner.semaphore_list[sem_id].as_ref().unwrap());
     drop(process_inner);
     sem.up();
-    debug!("{} sem {} up", current_task().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, sem_id);
     0
 }
 
 pub fn sys_semaphore_down(sem_id: usize) -> isize {
-    debug!("{} try sem {} down", current_task().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, sem_id);
     let process = current_process();
     let process_inner = process.inner_exclusive_access();
     let sem = Arc::clone(process_inner.semaphore_list[sem_id].as_ref().unwrap());
     drop(process_inner);
     sem.down();
-    debug!("{} sem {} down", current_task().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, sem_id);
     0
 }
 
@@ -138,4 +133,29 @@ pub fn sys_condvar_wait(condvar_id: usize, mutex_id: usize) -> isize {
     drop(process_inner);
     condvar.wait(mutex);
     0
+}
+
+bitflags! {
+    pub struct EFDFlags: usize {
+        const EFD_SEMAPHORE = 1;
+        const EFD_NONBLOCK = 2048;
+    }
+}
+
+pub fn sys_eventfd(initval: usize, flags: usize) -> isize {
+    let flags = EFDFlags::from_bits(flags);
+    if let Some(flags) = flags {
+        let process = current_process();
+        let mut inner = process.inner_exclusive_access();
+        let fd = inner.alloc_fd();
+        if flags.contains(EFDFlags::EFD_SEMAPHORE) {
+            inner.fd_table[fd] = Some(Arc::new(SemaphoreFD::new(initval, !flags.contains(EFDFlags::EFD_NONBLOCK), fd)));
+        }
+        else {
+            inner.fd_table[fd] = Some(Arc::new(MutexFD::new(initval, !flags.contains(EFDFlags::EFD_NONBLOCK), fd)));
+        }
+        fd as isize
+    } else {
+        -1
+    }
 }

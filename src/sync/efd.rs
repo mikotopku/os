@@ -117,9 +117,10 @@ impl SemaphoreFD {
 impl File for SemaphoreFD {
     fn read(&self, _buf: crate::mm::UserBuffer) -> usize {
         if self.block {
-            debug!("{} {} try sem down", current_task().as_ref().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, self.fd);
+            debug!("{} try sem {} down", current_task().as_ref().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, self.fd);
+            *self.res.exclusive_access() -= 1;
             self.sem.as_ref().unwrap().down();
-            debug!("{} {} sem down", current_task().as_ref().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, self.fd);
+            debug!("{} sem {} down (-> {})", current_task().as_ref().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, self.fd, *self.res.exclusive_access() as isize);
             1
         } else {
             if *self.res.exclusive_access() as isize <= 0 {
@@ -132,7 +133,7 @@ impl File for SemaphoreFD {
     }
     fn write(&self, _buf: crate::mm::UserBuffer) -> usize {
         if self.block {
-            debug!("{} {} sem up", current_task().as_ref().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, self.fd);
+            debug!("{} sem {} up (-> {})", current_task().as_ref().unwrap().inner_exclusive_access().res.as_ref().unwrap().tid, self.fd, *self.res.exclusive_access() as isize);
             self.sem.as_ref().unwrap().up();
         } else {
             *self.res.exclusive_access() += 1;
